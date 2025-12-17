@@ -6,32 +6,37 @@ use App\Models\Rule;
 
 class PointCalculator
 {
-    /**
-     * @param int $score 素点
-     * @param array<int> $ranks 同順位グループ内の順位リスト（例: [1,2]）
-     * @param Rule $rule
-     */
     public static function calculate(
         int $score,
-        array $ranks,
-        Rule $rule
+        float $rankValue,
+        Rule $rule,
+        int $mistakeCount = 0
     ): float {
-        // ① 素点 → 持ち点計算
+        // 素点計算
         $base = ($score - $rule->return_score) / 1000;
 
-        // ② 同順ウマ平均
+        // ウマ配列
+        $umaMap = [
+            1 => $rule->uma_1,
+            2 => $rule->uma_2,
+            3 => $rule->uma_3,
+            4 => $rule->uma_4,
+        ];
+
+        // 同順位ウマ平均
+        $rankStart = (int) floor($rankValue);
+        $rankEnd   = (int) ceil($rankValue);
+
         $umaSum = 0;
-        foreach ($ranks as $rank) {
-            $umaSum += match ($rank) {
-                1 => $rule->uma_1,
-                2 => $rule->uma_2,
-                3 => $rule->uma_3,
-                4 => $rule->uma_4,
-            };
+        for ($i = $rankStart; $i <= $rankEnd; $i++) {
+            $umaSum += $umaMap[$i];
         }
 
-        $umaAvg = $umaSum / count($ranks);
+        $avgUma = $umaSum / ($rankEnd - $rankStart + 1);
 
-        return $base + $umaAvg;
+        // チョンボ（-20固定）
+        $penalty = $mistakeCount * 20;
+
+        return $base + $avgUma - $penalty;
     }
 }
